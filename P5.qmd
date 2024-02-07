@@ -1,0 +1,104 @@
+---
+title: "Project 5"
+author: "Your Name Here"
+format: 
+  html:
+    self-contained: true
+    echo: true
+    message: false
+    warning: false
+    error: true # IMPORTANT NOTE - this makes the file render even if there is an error. it is imperative that you check your .html document *before submission* to make sure that it has all results in it.
+editor: source
+---
+
+**For the following scenarios, determine what distribution is appropriate for modeling purposes. Provide appropriate justification on your selection. If you are considering the normal distribution, put together a basic model to examine the residuals. Note that it is possible for data to be continuous but the normal distribution is not appropriate.**
+
+**Major hint: I would recommend you construct a histogram for continuous outcomes to get an idea of the shape.**
+
+**1. Consider the video game data here: [https://think.cs.vt.edu/corgis/csv/video_games/](https://think.cs.vt.edu/corgis/csv/video_games/). Import the data.**
+
+```{r}
+
+```
+
+**1a. Determine the appropriate modeling strategy when modeling total sales (*Metrics.Sales*; millions of dollars) as a function of supporting online play (*Features.Online?*) and release rating (*Release.Rating*).**
+
+```{r}
+
+```
+
+**1b. Determine the appropriate modeling strategy when examining review score for the games (*Metrics.Review.Score*) as a function of supporting online play (*Features.Online?*) and release rating (*Release.Rating*).**
+
+```{r}
+
+```
+
+
+
+
+**2. Consider the hospital safety data here: [https://corgis-edu.github.io/corgis/csv/hospitals/](https://corgis-edu.github.io/corgis/csv/hospitals/). Import the data.** 
+
+```{r}
+
+```
+
+**2a. Suppose we are interested in analyzing data from hospitals that are not of unknown or proprietary facility type (*Facility.Type*). We also want to limit the data to data from hospitals with known readmission ratings (*Rating.Readmission*), known timeliness ratings (*Rating.Timeliness*), known safety ratings (*Rating.Safety*), and known mortality rating (*Rating.Mortality*). Perform the appropriate data management steps to create a subset of data meeting this criteria.**
+
+```{r}
+
+```
+
+**2b. Using the data from 2a, model the safety ratings (*Rating.Safety*) that are either above or below the national average as a function of the timeliness ratings (*Rating.Timeliness*). Note: this requires an extra data management step!**
+
+```{r}
+
+```
+
+**2c. Using the data from 2a, model the safety ratings (*Rating.Safety*) that are above, at, or below the national average as a function of the timeliness ratings (*Rating.Timeliness*).**
+
+```{r}
+
+```
+
+**2d. Using the data from 2a, model the cost of heart attack procedure (*Procedure.Heart Attack.Cost*) as a function of facility type (*Facility.Type*) and the safety rating (*Rating.Mortality*).**
+
+```{r}
+
+```
+
+
+
+**3. Consider the billionaire data here: [https://corgis-edu.github.io/corgis/csv/billionaires/](https://corgis-edu.github.io/corgis/csv/billionaires/). Import the data.** 
+
+```{r}
+
+```
+
+**3a. Model how the person became a billionaire (*wealth.how.inherited*) as a function of the year of data collection (*year*) and the age of the billionaire (*demographics.age*).**
+
+```{r}
+
+```
+
+**3b. What limitations does the model in 3a have? To answer this question, you should literally open the dataset and look at it; you may want to sort the data as well. Consider what you see and ask yourself what assumptions we make in all of the modeling strategies we have covered.**
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
