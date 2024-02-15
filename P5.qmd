@@ -1,86 +1,1125 @@
 ---
 title: "Project 5"
-author: "Your Name Here"
+author: "Brandy Carr"
 format: 
   html:
+    linkcolor: "#037968"
+    highlight-style: highlight.theme
+    grid: 
+      sidebar-width: 0px
+      body-width: 1000px
+      margin-width: 0px
     self-contained: true
     echo: true
+    code-fold: true
     message: false
     warning: false
     error: true # IMPORTANT NOTE - this makes the file render even if there is an error. it is imperative that you check your .html document *before submission* to make sure that it has all results in it.
 editor: source
 ---
 
+<head>
+
+<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Quicksand">
+
+<style>
+
+  .Tbls td, .Tbls th {
+    padding: 5px 15px 5px 15px;
+    font-family: Quicksand !important;
+    color: #888888;
+  }
+  
+  .Tbls th {
+    background-color: #888888;
+    color: #FFFFFF !important;
+    font-size: 0.8rem !important;
+  }
+  
+  .Tbls caption {
+    padding-top: 1rem !important;
+    padding-bottom: 0.5rem !important;
+    color: #888888 !important;
+    font-size: 0.8rem !important;
+    font-family: Quicksand !important;
+    text-align: left !important;
+  }
+
+  details>summary {
+    color: #0099FF !important;
+    font-size: 0.9rem !important;
+    font-family: Quicksand !important;
+  }
+
+</style>
+
+</head>
+
+</br>
+
 **For the following scenarios, determine what distribution is appropriate for modeling purposes. Provide appropriate justification on your selection. If you are considering the normal distribution, put together a basic model to examine the residuals. Note that it is possible for data to be continuous but the normal distribution is not appropriate.**
 
 **Major hint: I would recommend you construct a histogram for continuous outcomes to get an idea of the shape.**
 
-**1. Consider the video game data here: [https://think.cs.vt.edu/corgis/csv/video_games/](https://think.cs.vt.edu/corgis/csv/video_games/). Import the data.**
-
 ```{r}
+#| code-summary: "R Code: Packages"
 
+library(tidyverse)
+library(rcompanion)
+library(kableExtra)
+library(cowplot)
 ```
 
-**1a. Determine the appropriate modeling strategy when modeling total sales (*Metrics.Sales*; millions of dollars) as a function of supporting online play (*Features.Online?*) and release rating (*Release.Rating*).**
+</br>
+
+</br>
+
+## 1. Video Game Data: [https://think.cs.vt.edu/corgis/csv/video_games/](https://think.cs.vt.edu/corgis/csv/video_games/)
 
 ```{r}
+#| code-summary: "R Code: Import Video Game Data"
 
+VGA <- read.csv("video_games.csv")
+
+# Fixed Column Names in Data
+names(VGA) <- gsub("\\W","",names(VGA))
+
+# Key/Variable Meta (fixed variable names here too, removed periods from descriptions, & dropped the example values)
+VGAk <- read.csv("video_games_KEY.csv", sep="\t") %>% 
+          mutate(VAR=gsub("\\W","",VAR), DESC=gsub("\\.$","",DESC)) %>%
+          select(VAR, TYPE, DESC)
 ```
 
-**1b. Determine the appropriate modeling strategy when examining review score for the games (*Metrics.Review.Score*) as a function of supporting online play (*Features.Online?*) and release rating (*Release.Rating*).**
+</br>
+
+#### 1a. Determine the appropriate modeling strategy when modeling total sales (*MetricsSales*; millions of dollars) as a function of ~~supporting online play (*FeaturesOnline*) and~~ release rating (*ReleaseRating*).
+
+</br>
 
 ```{r}
+#| code-summary: "R Code: Variables & Data Preview"
+#| results: hold
 
+VGA1a <- select(VGA, MetricsSales, ReleaseRating)
+
+VGAk[VGAk$VAR %in% names(VGA1a),] %>% 
+  kbl(align=c("l","c","l"),
+      caption="VARIABLES", 
+      format="html", 
+      table.attr='class="Tbls"') %>% 
+  kable_styling(c("bordered","hover"))
+
+head(VGA1a) %>% 
+  kbl(align=rep("c",4), 
+      caption="DATA (first 6 rows)",
+      full_width=F,
+      format="html", 
+      table.attr='class="Tbls"') %>% 
+  kable_styling(c("bordered","hover"))
 ```
 
-
-
-
-**2. Consider the hospital safety data here: [https://corgis-edu.github.io/corgis/csv/hospitals/](https://corgis-edu.github.io/corgis/csv/hospitals/). Import the data.** 
+</br>
 
 ```{r}
+#| code-summary: "R Code: Univariate Plots"
+#| results: hold
+#| fig-align: left
+#| out-width: 100%
+#| fig-asp: 0.7
 
+  VGA1a$ReleaseRating <- factor(VGA1a$ReleaseRating, levels=c("E","T","M"), labels=c("Everyone","Teen","Mature"))
+  
+  p_ReleaseRating <- ggplot(VGA1a, aes(x=ReleaseRating, fill=ReleaseRating, color=ReleaseRating)) + 
+                      geom_bar(alpha=0.1) + 
+                      scale_fill_manual(values=c("#EACA00","#FA962D","#D65074")) +
+                      scale_color_manual(values=c("#EACA00","#FA962D","#D65074")) +
+                      labs(x="", title="ReleaseRating", subtitle="NOMINAL") + 
+                      theme_bw(base_size=8) +
+                      theme(plot.title=element_text(face="bold", size=9),
+                            plot.subtitle=element_text(size=5, color="gray50"),
+                            axis.text.x=element_text(size=7.5, color="black"),
+                            legend.position="none",
+                            plot.margin=unit(c(0.3,0.3,0.15,0.2), "cm"),
+                            plot.background=element_blank())
+  
+  p_MetricsSales_HIST <- ggplot(VGA1a, aes(x=MetricsSales)) + 
+                          geom_histogram(aes(y=..density..), alpha=0.1, color="#88D800", fill="#88D800") +
+                          stat_function(fun=dnorm, args=list(mean=mean(VGA1a$MetricsSales), sd=sd(VGA1a$MetricsSales)), color="#00BBA0") +
+                          scale_x_continuous(breaks=seq(0,15,1), expand=c(0,0.4)) +
+                          scale_y_continuous(breaks=seq(0,1,0.2)) +
+                          labs(x="Total Sales (millions of dollars)", y="density", title="MetricsSales", subtitle="CONTINUOUS") + 
+                          theme_bw(base_size=8) +
+                          theme(plot.title=element_text(face="bold", size=9),
+                                plot.subtitle=element_text(size=5, color="gray50"),
+                                axis.text.x=element_text(size=6, color="gray30"),
+                                axis.title.x=element_text(size=7),
+                                plot.margin=unit(c(0.2,0.3,0.3,0.3), "cm"),
+                                plot.background=element_blank())
+  
+  p_MetricsSales_CDF <- ggplot(VGA1a, aes(x=MetricsSales)) + 
+                          geom_hline(yintercept=1, linetype="dashed", col="gray50") +
+                          geom_vline(xintercept=seq(1,5,1), linetype="dashed", col=DescTools::SetAlpha("#00BBA0", 0.7)) +
+                          stat_ecdf(geom="point", color="#88D800", size=1) +
+                          scale_x_continuous(breaks=seq(0,15,1), expand=c(0,0.5)) +
+                          labs(x="Total Sales (millions of dollars)", title="Empirical CDF of MetricsSales", subtitle="CONTINUOUS") + 
+                          theme_bw(base_size=8) +
+                          theme(plot.title=element_text(face="bold", size=9),
+                                plot.subtitle=element_text(size=5, color="gray50"),
+                                axis.text.x=element_text(size=5.7, color="gray30"),
+                                axis.title.x=element_text(size=6.7),
+                                plot.margin=unit(c(0.3,0.2,0.2,0.3), "cm"),
+                                plot.background=element_blank())
+
+  p_blank <- ggplot(data.frame()) +
+                geom_point() +
+                theme_bw() +
+                theme(plot.margin=unit(c(0,0,0,0), "cm"),
+                      plot.background=element_blank(),
+                      panel.background=element_blank(),
+                      panel.border=element_blank())
+  
+                      #panel.background=element_rect(fill="#F6F6F6"),
+                      #panel.border=element_rect(color="#CCCCCC"))
+  
+  ggdraw(p_blank) +
+    draw_plot(p_MetricsSales_CDF, x = 0, y = 0.54, width = 0.63, height = 0.46) +
+    draw_plot(p_ReleaseRating, x = 0.65, y = 0.53, width = 0.35, height = 0.47) +
+    draw_plot(p_MetricsSales_HIST, x = 0, y = 0, width = 1, height = 0.52)
 ```
 
-**2a. Suppose we are interested in analyzing data from hospitals that are not of unknown or proprietary facility type (*Facility.Type*). We also want to limit the data to data from hospitals with known readmission ratings (*Rating.Readmission*), known timeliness ratings (*Rating.Timeliness*), known safety ratings (*Rating.Safety*), and known mortality rating (*Rating.Mortality*). Perform the appropriate data management steps to create a subset of data meeting this criteria.**
+</br>
+
+**ReleaseRating** 
+
+- Nominal 
+- 3 Levels: Everyone, Teen, Mature
+- Although the count for Mature is about half that of the other rating levels, it's large enough for use in a model 
+
+</br>
+
+**MetricsSales**
+
+- Continuous
+- Does not appear, at all, to be normally distributed
+- Bounded to the left at 0 
+- Heavily right skewed
+- Extreme outliers
+
+<!--
+From the CDF we can estimate the following:
+
+- **97.7%** of MetricsSales were less than 3 million (**2.2%** increase in volume from MetricsSales less than 2 million)
+- **98.6%** of MetricsSales were less than 4 million (**0.9%** increase in volume from MetricsSales less than 3 million)
+- **98.9%** of MetricsSales were less than 5 million (**0.3%** increase in volume from MetricsSales less than 4 million)
+-->
+
+</br>
 
 ```{r}
+#| code-summary: "R Code: Log Transformation"
+#| results: hold
+#| code-fold: show
 
+# Take the log of MetricsSales to correct for heavy right skew
+VGA1a$MetricsSales_log <- log(VGA1a$MetricsSales)
 ```
 
-**2b. Using the data from 2a, model the safety ratings (*Rating.Safety*) that are either above or below the national average as a function of the timeliness ratings (*Rating.Timeliness*). Note: this requires an extra data management step!**
+</br>
 
 ```{r}
+#| code-summary: "R Code: Outliers"
+#| code-fold: show
+#| results: hold
 
+s_MetricsSales <- sort(VGA1a$MetricsSales)
+Outliers_i <- which(log(s_MetricsSales) %in% boxplot.stats(log(s_MetricsSales))$out)
+s_MetricsSales[Outliers_i]
+
+# Subset data by MetricsSales < 5 million 
+# chose this cutoff from looking at the CDF plot above & these outlier values
+VGA1a_5mil <- VGA1a[VGA1a$MetricsSales < 5,]
 ```
 
-**2c. Using the data from 2a, model the safety ratings (*Rating.Safety*) that are above, at, or below the national average as a function of the timeliness ratings (*Rating.Timeliness*).**
+</br>
 
 ```{r}
+#| code-summary: "R Code: Skewness & Kurtosis"
+#| code-fold: show
+#| results: hold
 
+# Check if kurtosis is significantly different from 3
+moments::anscombe.test(VGA1a_5mil$MetricsSales_log)
+  
+# Check if skewness is significantly different from 0 
+moments::agostino.test(VGA1a_5mil$MetricsSales_log)
 ```
 
-**2d. Using the data from 2a, model the cost of heart attack procedure (*Procedure.Heart Attack.Cost*) as a function of facility type (*Facility.Type*) and the safety rating (*Rating.Mortality*).**
+</br>
 
 ```{r}
+#| code-summary: "R Code: Normal Histogram for Log of MetricsSales < 5 Million"
+#| results: hold
+#| fig-align: center
+#| out-width: 70%
+#| fig-asp: 0.5
 
+  #MetricsSales5 = VGA1$MetricsSales[VGA1$MetricsSales < 5]
+  #MetricsSales5_log = log(MetricsSales5)
+  par(cex=0.6)
+  rcompanion::plotNormalHistogram(VGA1a_5mil$MetricsSales_log, 
+                                  prob=F, 
+                                  main="Log of MetricsSales Under 5mil", 
+                                  xlab="",
+                                  col="#88D80015", border="#88D800", linecol="#00BBA0")
 ```
 
-
-
-**3. Consider the billionaire data here: [https://corgis-edu.github.io/corgis/csv/billionaires/](https://corgis-edu.github.io/corgis/csv/billionaires/). Import the data.** 
+</br>
 
 ```{r}
+#| code-summary: "R Code: Bivariate Boxplot"
+#| results: hold
+#| fig-align: center
+#| out-width: 70%
+#| fig-asp: 0.7
 
+  VGA1a_5mil %>% 
+    group_by(ReleaseRating) %>%
+    ggplot(aes(y=MetricsSales_log, x=ReleaseRating, fill=ReleaseRating, color=ReleaseRating)) +
+      geom_boxplot() +
+      scale_fill_manual(values=c("#EACA0040","#FA962D40","#D6507440")) +
+      scale_color_manual(values=c("#EACA00","#FA962D","#D65074")) +
+      scale_y_continuous(breaks=seq(-4,1,1)) +
+      theme_bw() +
+      theme(legend.position="none", panel.border=element_rect(color="#CCCCCC"))
 ```
 
-**3a. Model how the person became a billionaire (*wealth.how.inherited*) as a function of the year of data collection (*year*) and the age of the billionaire (*demographics.age*).**
+</br>
 
 ```{r}
+#| code-fold: false
 
+# Linear Regression Model
+m1a <- lm(MetricsSales_log ~ ReleaseRating, data=VGA1a_5mil)
 ```
 
-**3b. What limitations does the model in 3a have? To answer this question, you should literally open the dataset and look at it; you may want to sort the data as well. Consider what you see and ask yourself what assumptions we make in all of the modeling strategies we have covered.**
+</br>
+
+```{r}
+#| code-summary: "R Code: Residuals Normality Check"
+#| code-fold: show
+#| results: hold
+#| out-width: 100%
+#| fig-asp: 0.6
+
+StdResiduals <- MASS::stdres(m1a)
+
+par(mfrow=c(1,2), cex.axis=0.5, cex.lab=0.6, cex.main=0.7)
+
+# Residuals QQPlot
+# invisible() suppresses any integer's being printed by qqPlot()
+invisible(car::qqPlot(StdResiduals, 
+                      main="QQPlot", 
+                      id=F, grid=F,
+                      col="gray30", col.lines="#88D800"))
+
+# Residuals Normal Histogram
+rcompanion::plotNormalHistogram(StdResiduals, 
+                                prob=F, 
+                                main="Normal Histogram", 
+                                col="#88D80015", border="#88D800", linecol="#00BBA0")
+```
+
+</br>
+
+<!--
+$\LARGE{\texttt{Modeling Strategy: }}  \large{\text{Linear Regression}}$
+
+$\large{\texttt{Continuous Dependent Variable: }} \small{\text{Log of MetricsSales}}$
+
+$\large{\texttt{Subset Data: }} \small{\text{MetricsSales < 5 Million}}$
+
+$\large{\texttt{1 Nominal Independent Variable With 3 Levels: }} \small{\text{ReleaseRating (Everyone, Teen, Mature)}}$
+
+$\large{\texttt{Residuals: }} \small{\text{Normal}}$
+
+</br>
+-->
+
+#### 1b. Determine the appropriate modeling strategy when examining review score for the games (*MetricsReviewScore*) as a function of ~~supporting online play (*FeaturesOnline*) and~~ release rating (*ReleaseRating*).
+
+</br>
+
+```{r}
+#| code-summary: "R Code: Variables & Data Preview"
+#| results: hold
+
+VGA1b <- select(VGA, MetricsReviewScore, ReleaseRating)
+
+VGAk[VGAk$VAR %in% names(VGA1b),] %>% 
+  kbl(align=c("l","c","l"),
+      caption="VARIABLES", 
+      format="html", 
+      table.attr='class="Tbls"') %>% 
+  kable_styling(c("bordered","hover"))
+
+head(VGA1b) %>% 
+  kbl(align=rep("c",4), 
+      caption="DATA (first 6 rows)",
+      full_width=F,
+      format="html", 
+      table.attr='class="Tbls"') %>% 
+  kable_styling(c("bordered","hover"))
+```
+
+</br>
+
+```{r}
+#| code-summary: "R Code: Univariate Plots"
+#| results: hold
+#| fig-align: left
+#| out-width: 100%
+#| fig-asp: 0.7
+
+  VGA1b$ReleaseRating <- factor(VGA1b$ReleaseRating, levels=c("E","T","M"), labels=c("Everyone","Teen","Mature"))
+  
+  p_ReleaseRating <- ggplot(VGA1b, aes(x=ReleaseRating, fill=ReleaseRating, color=ReleaseRating)) + 
+                      geom_bar(alpha=0.1) + 
+                      scale_fill_manual(values=c("#EACA00","#FA962D","#D65074")) +
+                      scale_color_manual(values=c("#EACA00","#FA962D","#D65074")) +
+                      labs(x="", title="ReleaseRating", subtitle="NOMINAL") + 
+                      theme_bw(base_size=8) +
+                      theme(plot.title=element_text(face="bold", size=9),
+                            plot.subtitle=element_text(size=5, color="gray50"),
+                            axis.text.x=element_text(size=7.5, color="black"),
+                            legend.position="none",
+                            plot.margin=unit(c(0.3,0.3,0.15,0.2), "cm"),
+                            plot.background=element_blank())
+  
+  p_MetricsReviewScore_HIST <- ggplot(VGA1b, aes(x=MetricsReviewScore)) + 
+                          geom_histogram(aes(y=..density..), alpha=0.1, color="#88D800", fill="#88D800") +
+                          stat_function(fun=dnorm, 
+                                        args=list(mean=mean(VGA1b$MetricsReviewScore), sd=sd(VGA1b$MetricsReviewScore)), 
+                                        color="#00BBA0") +
+                          scale_x_continuous(breaks=seq(0,100,10)) +
+                          scale_y_continuous(breaks=seq(0,0.05,0.01)) +
+                          labs(x="Review Score (out of 100)", y="density", title="MetricsReviewScore", subtitle="CONTINUOUS") + 
+                          theme_bw(base_size=8) +
+                          theme(plot.title=element_text(face="bold", size=9),
+                                plot.subtitle=element_text(size=5, color="gray50"),
+                                axis.text.x=element_text(size=6, color="gray30"),
+                                axis.title.x=element_text(size=7),
+                                plot.margin=unit(c(0.2,0.3,0.3,0.3), "cm"),
+                                plot.background=element_blank())
+  
+  p_MetricsReviewScore_CDF <- ggplot(VGA1b, aes(x=MetricsReviewScore)) + 
+                          geom_hline(yintercept=1, linetype="dashed", col="gray50") +
+                          stat_ecdf(geom="point", color="#88D800", size=1) +
+                          scale_x_continuous(breaks=seq(0,100,10)) +
+                          labs(x="Review Score (out of 100)", title="Empirical CDF of MetricsReviewScore", subtitle="CONTINUOUS") + 
+                          theme_bw(base_size=8) +
+                          theme(plot.title=element_text(face="bold", size=9),
+                                plot.subtitle=element_text(size=5, color="gray50"),
+                                axis.text.x=element_text(size=5.7, color="gray30"),
+                                axis.title.x=element_text(size=6.7),
+                                plot.margin=unit(c(0.3,0.2,0.2,0.3), "cm"),
+                                plot.background=element_blank())
+
+  p_blank <- ggplot(data.frame()) +
+                geom_point() +
+                theme_bw() +
+                theme(plot.margin=unit(c(0,0,0,0), "cm"),
+                      plot.background=element_blank(),
+                      panel.background=element_blank(),
+                      panel.border=element_blank())
+  
+  ggdraw(p_blank) +
+    draw_plot(p_MetricsReviewScore_CDF, x = 0, y = 0.54, width = 0.63, height = 0.46) +
+    draw_plot(p_ReleaseRating, x = 0.65, y = 0.53, width = 0.35, height = 0.47) +
+    draw_plot(p_MetricsReviewScore_HIST, x = 0, y = 0, width = 1, height = 0.52)
+```
+
+</br>
+
+**ReleaseRating** 
+
+- Nominal 
+- 3 Levels: Everyone, Teen, Mature
+- Although the count for Mature is about half that of the other rating levels, it's large enough for use in a model 
+
+</br>
+
+**MetricsReviewScore**
+
+- Continuous
+- Appears to be almost normally distributed
+- Slight left skew
+
+</br>
+
+```{r}
+#| code-summary: "R Code: Skewness & Kurtosis"
+#| code-fold: show
+#| results: hold
+
+# Check if kurtosis is significantly different from 3
+moments::anscombe.test(VGA1b$MetricsReviewScore)
+  
+# Check if skewness is significantly different from 0 
+moments::agostino.test(VGA1b$MetricsReviewScore)
+```
+
+</br>
+
+Skewness is significant. Will apply a Box-Cox transformation to correct for the left skew.
+
+</br>
+
+```{r}
+#| code-summary: "R Code: Box-Cox Transformation"
+#| code-fold: show
+#| results: hold
+
+lambda <- car::powerTransform(VGA1b$MetricsReviewScore)$lambda
+
+y <- VGA1b$MetricsReviewScore
+
+VGA1b$MetricsReviewScore_bc <- (y^lambda - 1) / lambda
+
+# Normal Histogram
+par(cex=0.6)
+rcompanion::plotNormalHistogram(VGA1b$MetricsReviewScore_bc, 
+                                prob=F, 
+                                main="Box-Cox Transformation of MetricsReviewScore", 
+                                xlab="",
+                                col="#88D80015", border="#88D800", linecol="#00BBA0")
+```
+
+</br>
+
+```{r}
+#| code-summary: "R Code: Bivariate Boxplot"
+#| results: hold
+#| fig-align: center
+#| out-width: 70%
+#| fig-asp: 0.7
+
+  VGA1b %>% 
+    group_by(ReleaseRating) %>%
+    ggplot(aes(y=MetricsReviewScore_bc, x=ReleaseRating, fill=ReleaseRating, color=ReleaseRating)) +
+      geom_boxplot() +
+      scale_fill_manual(values=c("#EACA0040","#FA962D40","#D6507440")) +
+      scale_color_manual(values=c("#EACA00","#FA962D","#D65074")) +
+      scale_y_continuous(breaks=seq(0,3000,500)) +
+      theme_bw() +
+      theme(legend.position="none", panel.border=element_rect(color="#CCCCCC"))
+```
+
+</br>
+
+```{r}
+#| code-fold: false
+
+# Linear Regression Model
+m1b <- lm(MetricsReviewScore_bc ~ ReleaseRating, data=VGA1b)
+```
+
+</br>
+
+```{r}
+#| code-summary: "R Code: Residuals Normality Check"
+#| code-fold: show
+#| results: hold
+#| out-width: 100%
+#| fig-asp: 0.6
+
+StdResiduals <- MASS::stdres(m1b)
+
+par(mfrow=c(1,2), cex.axis=0.5, cex.lab=0.6, cex.main=0.7)
+
+# Residuals QQPlot
+# invisible() suppresses any integer's being printed by qqPlot()
+invisible(car::qqPlot(StdResiduals, 
+                      main="QQPlot", 
+                      id=F, grid=F,
+                      col="gray30", col.lines="#88D800"))
+
+# Residuals Normal Histogram
+rcompanion::plotNormalHistogram(StdResiduals, 
+                                prob=F, 
+                                main="Normal Histogram", 
+                                col="#88D80015", border="#88D800", linecol="#00BBA0")
+```
+
+</br>
+
+</br>
+
+
+## 2. Hospital Safety Data: [https://corgis-edu.github.io/corgis/csv/hospitals/](https://corgis-edu.github.io/corgis/csv/hospitals/)
+
+```{r}
+#| code-summary: "R Code: Hospital Safety Data"
+
+# Data
+hospitals <- read.csv("hospitals.csv")
+
+# Key/Variable Meta
+hospitalsk <- read.csv("hospitals_KEY.csv")
+```
+
+</br>
+
+#### 2a. Suppose we are interested in analyzing data from hospitals that are not of unknown or proprietary facility type (*Facility.Type*). We also want to limit the data to data from hospitals with known readmission ratings (*Rating.Readmission*), known timeliness ratings (*Rating.Timeliness*), known safety ratings (*Rating.Safety*), and known mortality rating (*Rating.Mortality*). Perform the appropriate data management steps to create a subset of data meeting this criteria.
+
+</br>
+
+```{r}
+#| code-summary: "R Code: Variables & Data Preview"
+#| results: hold
+
+hospitals <- filter(hospitals, 
+                      !(Facility.Type %in% c("Unknown","Proprietary")), 
+                      Rating.Readmission != "None", 
+                      Rating.Timeliness != "None",
+                      Rating.Safety != "None",
+                      Rating.Mortality != "None") %>%
+                  select(Facility.Type,
+                         Rating.Readmission,
+                         Rating.Timeliness,
+                         Rating.Safety,
+                         Rating.Mortality)
+
+hospitalsk[hospitalsk$VAR %in% names(hospitals),] %>% 
+  kbl(align=c("l","c","l"),
+      caption="VARIABLES", 
+      format="html", 
+      table.attr='class="Tbls"') %>% 
+  kable_styling(c("bordered","hover"))
+
+head(hospitals) %>% 
+  kbl(align=rep("c",5), 
+      caption="DATA (first 6 rows)",
+      full_width=F,
+      format="html", 
+      table.attr='class="Tbls"') %>% 
+  kable_styling(c("bordered","hover"))
+```
+
+</br>
+
+#### 2b. Using the data from 2a, model the safety ratings (*Rating.Safety*) that are either above or below the national average as a function of the timeliness ratings (*Rating.Timeliness*). Note: this requires an extra data management step!
+
+</br>
+
+```{r}
+#| code-fold: false
+hospitals2b <- select(hospitals, Rating.Safety, Rating.Timeliness) %>% filter(Rating.Safety != "Same")
+```
+
+</br>
+
+```{r}
+#| code-summary: "R Code: Univariate Plots"
+#| results: hold
+#| fig-align: left
+#| out-width: 100%
+#| fig-asp: 0.5
+  hospitals2b$Rating.Safety <- factor(hospitals2b$Rating.Safety, levels=c("Below","Above"))
+  hospitals2b$Rating.Timeliness <- factor(hospitals2b$Rating.Timeliness, levels=c("Below","Same","Above"))
+  
+  p_Rating.Safety <- ggplot(hospitals2b, aes(x=Rating.Safety, fill=Rating.Safety, color=Rating.Safety)) + 
+                      geom_bar(alpha=0.1) + 
+                      scale_fill_manual(values=c("#D65074","#EACA00")) +
+                      scale_color_manual(values=c("#D65074","#EACA00")) +
+                      labs(x="", title="Rating.Safety", subtitle="BINARY") + 
+                      theme_bw(base_size=8) +
+                      theme(plot.title=element_text(face="bold", size=9),
+                            plot.subtitle=element_text(size=5, color="gray50"),
+                            axis.text.x=element_text(size=7.5, color="black"),
+                            legend.position="none",
+                            plot.margin=unit(c(0.3,0.2,0.3,0.3), "cm"),
+                            plot.background=element_blank())
+  
+  p_Rating.Timeliness <- ggplot(hospitals2b, aes(x=Rating.Timeliness, fill=Rating.Timeliness, color=Rating.Timeliness)) + 
+                      geom_bar(alpha=0.1) + 
+                      scale_fill_manual(values=c("#D65074","#FA962D","#EACA00")) +
+                      scale_color_manual(values=c("#D65074","#FA962D","#EACA00")) +
+                      labs(x="", title="Rating.Timeliness", subtitle="ORDINAL") + 
+                      theme_bw(base_size=8) +
+                      theme(plot.title=element_text(face="bold", size=9),
+                            plot.subtitle=element_text(size=5, color="gray50"),
+                            axis.text.x=element_text(size=7.5, color="black"),
+                            legend.position="none",
+                            plot.margin=unit(c(0.3,0.3,0.3,0.2), "cm"),
+                            plot.background=element_blank())
+  
+  p_blank <- ggplot(data.frame()) +
+                geom_point() +
+                theme_bw() +
+                theme(plot.margin=unit(c(0,0,0,0), "cm"),
+                      plot.background=element_blank(),
+                      panel.background=element_blank(),
+                      panel.border=element_blank())
+  
+  ggdraw(p_blank) +
+    draw_plot(p_Rating.Safety, x = 0, y = 0, width = 0.45, height = 1) +
+    draw_plot(p_Rating.Timeliness, x = 0.55, y = 0, width = 0.45, height = 1)
+```
+
+</br>
+
+```{r}
+#| code-summary: "R Code: Bivariate Plots"
+#| results: hold
+#| fig-align: left
+#| out-width: 100%
+#| fig-asp: 0.5
+  
+  p1 <- ggplot(hospitals2b, aes(x=Rating.Timeliness, group=Rating.Safety)) + 
+                      geom_bar(aes(group=Rating.Timeliness, fill=Rating.Timeliness, color=Rating.Timeliness), alpha=0.1) + 
+                      scale_fill_manual(values=c("#D65074","#FA962D","#EACA00")) +
+                      scale_color_manual(values=c("#D65074","#FA962D","#EACA00")) +
+                      labs(x="Rating.Timeliness", title="") + 
+                      theme_bw(base_size=8) +
+                      theme(axis.text.x=element_text(size=7.5, color="black"),
+                            legend.position="none",
+                            plot.margin=unit(c(0.3,0.3,0.3,0.3), "cm"),
+                            plot.background=element_blank()) +
+                      facet_grid(.~Rating.Safety, labeller=label_both)
+  
+  p_blank <- ggplot(data.frame()) +
+                geom_point() +
+                theme_bw() +
+                theme(plot.margin=unit(c(0,0,0,0), "cm"),
+                      plot.background=element_blank(),
+                      panel.background=element_blank(),
+                      panel.border=element_blank())
+  
+  ggdraw(p_blank) + draw_plot(p1, x = 0, y = 0, width = 1, height = 1)
+```
+
+</br>
+
+None of the categories are sparse, will proceed to the next step.
+
+</br>
+
+```{r}
+#| code-fold: false
+#| results: hold
+
+# Binary Logistic Regression 
+m2b <- glm(Rating.Safety ~ Rating.Timeliness, data=hospitals2b, family="binomial"(link="logit"))
+
+# test significance of predictor
+car::Anova(m2b, type=3) 
+
+# test significance of the regression line
+#reduced <- glm(Rating.Safety ~ 1, data=hospitals2b, family="binomial"(link="logit"))
+#anova(reduced, m2b, test="LRT")
+```
+
+</br>
+
+</br>
+
+#### 2c. Using the data from 2a, model the safety ratings (*Rating.Safety*) that are above, at, or below the national average as a function of the timeliness ratings (*Rating.Timeliness*).
+
+</br>
+
+```{r}
+#| code-fold: false
+
+hospitals2c <- select(hospitals, Rating.Safety, Rating.Timeliness)
+```
+
+</br>
+
+```{r}
+#| code-summary: "R Code: Univariate Plots"
+#| results: hold
+#| fig-align: left
+#| out-width: 100%
+#| fig-asp: 0.5
+
+  hospitals2c$Rating.Safety <- factor(hospitals2c$Rating.Safety, levels=c("Below","Same","Above"))
+  hospitals2c$Rating.Timeliness <- factor(hospitals2c$Rating.Timeliness, levels=c("Below","Same","Above"))
+  
+  p_Rating.Safety <- ggplot(hospitals2c, aes(x=Rating.Safety, fill=Rating.Safety, color=Rating.Safety)) + 
+                      geom_bar(alpha=0.1) + 
+                      scale_fill_manual(values=c("#D65074","#FA962D","#EACA00")) +
+                      scale_color_manual(values=c("#D65074","#FA962D","#EACA00")) +
+                      labs(x="", title="Rating.Safety", subtitle="ORDINAL") + 
+                      theme_bw(base_size=8) +
+                      theme(plot.title=element_text(face="bold", size=9),
+                            plot.subtitle=element_text(size=5, color="gray50"),
+                            axis.text.x=element_text(size=7.5, color="black"),
+                            legend.position="none",
+                            plot.margin=unit(c(0.3,0.2,0.3,0.3), "cm"),
+                            plot.background=element_blank())
+  
+  p_Rating.Timeliness <- ggplot(hospitals2c, aes(x=Rating.Timeliness, fill=Rating.Timeliness, color=Rating.Timeliness)) + 
+                      geom_bar(alpha=0.1) + 
+                      scale_fill_manual(values=c("#D65074","#FA962D","#EACA00")) +
+                      scale_color_manual(values=c("#D65074","#FA962D","#EACA00")) +
+                      labs(x="", title="Rating.Timeliness", subtitle="ORDINAL") + 
+                      theme_bw(base_size=8) +
+                      theme(plot.title=element_text(face="bold", size=9),
+                            plot.subtitle=element_text(size=5, color="gray50"),
+                            axis.text.x=element_text(size=7.5, color="black"),
+                            legend.position="none",
+                            plot.margin=unit(c(0.3,0.3,0.3,0.2), "cm"),
+                            plot.background=element_blank())
+  
+  p_blank <- ggplot(data.frame()) +
+                geom_point() +
+                theme_bw() +
+                theme(plot.margin=unit(c(0,0,0,0), "cm"),
+                      plot.background=element_blank(),
+                      panel.background=element_blank(),
+                      panel.border=element_blank())
+  
+  ggdraw(p_blank) +
+    draw_plot(p_Rating.Safety, x = 0, y = 0, width = 0.45, height = 1) +
+    draw_plot(p_Rating.Timeliness, x = 0.55, y = 0, width = 0.45, height = 1)
+```
+
+</br>
+
+```{r}
+#| code-summary: "R Code: Bivariate Plots"
+#| results: hold
+#| fig-align: left
+#| out-width: 100%
+#| fig-asp: 0.5
+  
+  p1 <- ggplot(hospitals2c, aes(x=Rating.Timeliness, group=Rating.Safety)) + 
+                      geom_bar(aes(group=Rating.Timeliness, fill=Rating.Timeliness, color=Rating.Timeliness), alpha=0.1) + 
+                      scale_fill_manual(values=c("#D65074","#FA962D","#EACA00")) +
+                      scale_color_manual(values=c("#D65074","#FA962D","#EACA00")) +
+                      labs(x="Rating.Timeliness", title="") + 
+                      theme_bw(base_size=8) +
+                      theme(axis.text.x=element_text(size=7.5, color="black"),
+                            legend.position="none",
+                            plot.margin=unit(c(0.3,0.3,0.3,0.3), "cm"),
+                            plot.background=element_blank()) +
+                      facet_grid(.~Rating.Safety, labeller=label_both)
+  
+  p_blank <- ggplot(data.frame()) +
+                geom_point() +
+                theme_bw() +
+                theme(plot.margin=unit(c(0,0,0,0), "cm"),
+                      plot.background=element_blank(),
+                      panel.background=element_blank(),
+                      panel.border=element_blank())
+  
+  ggdraw(p_blank) + draw_plot(p1, x = 0, y = 0, width = 1, height = 1)
+```
+
+</br>
+
+None of the categories are sparse, will proceed to the next step.
+
+</br>
+
+```{r}
+#| code-fold: false
+#| results: hold
+
+# Ordinal Logistic Regression 
+m2c <- MASS::polr(Rating.Safety ~ Rating.Timeliness, data=hospitals2c, method="logistic")
+summary(m2c, digits=4)
+```
+
+</br>
+
+</br>
+
+#### 2d. Using the data from 2a, model the cost of heart attack procedure (*Procedure.Heart.Attack.Cost*) as a function of facility type (*Facility.Type*) and the safety rating (*Rating.Mortality*).
+
+</br>
+
+```{r}
+#| code-summary: "R Code: Variables & Data Preview"
+#| results: hold
+
+hospitals <- read.csv("hospitals.csv")
+
+# Removed white spaces from column names
+names(hospitals) <- gsub(" ",".",names(hospitals))
+
+hospitals2d <- filter(hospitals, 
+                      !(Facility.Type %in% c("Unknown","Proprietary")), 
+                      Rating.Readmission != "None", 
+                      Rating.Timeliness != "None",
+                      Rating.Safety != "None",
+                      Rating.Mortality != "None") %>%
+                  select(Procedure.Heart.Attack.Cost,
+                         Facility.Type,
+                         Rating.Mortality)
+
+hospitalsk[hospitalsk$VAR %in% names(hospitals2d),] %>% 
+  kbl(align=c("l","c","l"),
+      caption="VARIABLES", 
+      format="html", 
+      table.attr='class="Tbls"') %>% 
+  kable_styling(c("bordered","hover"))
+
+head(hospitals2d) %>% 
+  kbl(align=rep("c",5), 
+      caption="DATA (first 6 rows)",
+      full_width=F,
+      format="html", 
+      table.attr='class="Tbls"') %>% 
+  kable_styling(c("bordered","hover"))
+```
+
+</br>
+
+```{r}
+#| code-fold: false
+#| results: hold
+
+count(hospitals2d, round(Procedure.Heart.Attack.Cost/10000,1))
+
+# Removing rows where Procedure.Heart.Attack.Cost = 0
+hospitals2d <- hospitals2d[hospitals2d$Procedure.Heart.Attack.Cost!=0,]
+```
+
+</br>
+
+```{r}
+#| code-summary: "R Code: Univariate Plots"
+#| results: hold
+#| fig-align: left
+#| out-width: 100%
+#| fig-asp: 0.7
+
+  hospitals2d$Facility.Type <- as.factor(hospitals2d$Facility.Type)
+  hospitals2d$Rating.Mortality <- factor(hospitals2d$Rating.Mortality, levels=c("Below","Same","Above"))
+
+  p_Rating.Mortality <- ggplot(hospitals2d, aes(x=Rating.Mortality, fill=Rating.Mortality, color=Rating.Mortality)) +
+                      geom_bar(alpha=0.1) +
+                      scale_fill_manual(values=c("#D65074","#FA962D","#EACA00")) +
+                      scale_color_manual(values=c("#D65074","#FA962D","#EACA00")) +
+                      labs(x="", title="Rating.Mortality", subtitle="ORDINAL") +
+                      theme_bw(base_size=8) +
+                      theme(plot.title=element_text(face="bold", size=9),
+                            plot.subtitle=element_text(size=5, color="gray50"),
+                            axis.text.x=element_text(size=7.5, color="black"),
+                            legend.position="none",
+                            plot.margin=unit(c(0.3,0.2,0.3,0.2), "cm"),
+                            plot.background=element_blank())
+
+  p_Facility.Type <- ggplot(hospitals2d, aes(x=Facility.Type, fill=Facility.Type, color=Facility.Type)) +
+                      geom_bar(alpha=0.1) +
+                      scale_fill_manual(values=c("#68BB00","#00BBA0","#0099FF")) +
+                      scale_color_manual(values=c("#68BB00","#00BBA0","#0099FF")) +
+                      labs(x="", title="Facility.Type", subtitle="NOMINAL") +
+                      theme_bw(base_size=8) +
+                      theme(plot.title=element_text(face="bold", size=9),
+                            plot.subtitle=element_text(size=5, color="gray50"),
+                            axis.text.x=element_text(size=7.5, color="black"),
+                            legend.position="none",
+                            plot.margin=unit(c(0.3,0.2,0.3,0.2), "cm"),
+                            plot.background=element_blank())
+    
+  p_Procedure.Heart.Attack.Cost_CDF <- ggplot(hospitals2d, aes(x=Procedure.Heart.Attack.Cost)) + 
+                          geom_hline(yintercept=1, linetype="dashed", col="gray50") +
+                          stat_ecdf(geom="point", color="#C774E8", size=1) +
+                          labs(x="Avg Cost of Care", title="Empirical CDF of Procedure.Heart.Attack.Cost", subtitle="CONTINUOUS") + 
+                          theme_bw(base_size=8) +
+                          theme(plot.title=element_text(face="bold", size=9),
+                                plot.subtitle=element_text(size=5, color="gray50"),
+                                axis.text.x=element_text(size=5.7, color="gray30"),
+                                axis.title.x=element_text(size=6.7),
+                                plot.margin=unit(c(0.3,0.2,0.3,0.2), "cm"),
+                                plot.background=element_blank())
+  
+  p_Procedure.Heart.Attack.Cost_HIST <- ggplot(hospitals2d, aes(x=Procedure.Heart.Attack.Cost)) + 
+                          geom_histogram(aes(y=..density..), alpha=0.1, color="#C774E8", fill="#C774E8") +
+                          stat_function(fun=dnorm, 
+                                        args=list(mean=mean(hospitals2d$Procedure.Heart.Attack.Cost), 
+                                                  sd=sd(hospitals2d$Procedure.Heart.Attack.Cost)),
+                                        color="#9E0142") +
+                          labs(x="Avg Cost of Care", y="density", title="Procedure.Heart.Attack.Cost", subtitle="CONTINUOUS") + 
+                          theme_bw(base_size=8) +
+                          theme(plot.title=element_text(face="bold", size=9),
+                                plot.subtitle=element_text(size=5, color="gray50"),
+                                axis.text.x=element_text(size=6, color="gray30"),
+                                axis.title.x=element_text(size=7),
+                                plot.margin=unit(c(0.3,0.2,0.3,0.2), "cm"),
+                                plot.background=element_blank())
+  
+  p_blank <- ggplot(data.frame()) +
+                geom_point() +
+                theme_bw() +
+                theme(plot.margin=unit(c(0,0,0,0), "cm"),
+                      plot.background=element_blank(),
+                      panel.background=element_blank(),
+                      panel.border=element_blank())
+  
+  ggdraw(p_blank) +
+    draw_plot(p_Rating.Mortality, x = 0, y = 0.54, width = 0.45, height = 0.46) +
+    draw_plot(p_Facility.Type, x = 0.55, y = 0.54, width = 0.45, height = 0.46) +
+    draw_plot(p_Procedure.Heart.Attack.Cost_CDF, x = 0, y = 0, width = 0.45, height = 0.52) +
+    draw_plot(p_Procedure.Heart.Attack.Cost_HIST, x = 0.55, y = 0, width = 0.45, height = 0.52)
+```
+
+</br>
+
+**Procedure.Heart.Attack.Cost** appears normally distributed.
+
+No sparse categories from **Rating.Mortality** or **Facility.Type**.
+
+</br>
+
+```{r}
+#| code-summary: "R Code: Bivariate Plots"
+#| results: hold
+#| fig-align: left
+#| out-width: 100%
+#| fig-asp: 0.7
+
+p_Heart.Attack_Mortality <-
+    ggplot(hospitals2d %>% group_by(Rating.Mortality), aes(y=Procedure.Heart.Attack.Cost, x=Rating.Mortality, fill=Rating.Mortality, color=Rating.Mortality)) +
+      geom_boxplot() +
+      scale_fill_manual(values=c("#EACA0040","#D6507440","#FA962D40")) +
+      scale_color_manual(values=c("#EACA00","#D65074","#FA962D")) +
+      theme_bw(base_size=8) +
+      theme(legend.position="none", axis.text.x=element_text(size=7.5, color="black"))
+
+p_Heart.Attack_Type <-
+    ggplot(hospitals2d %>% group_by(Facility.Type), aes(y=Procedure.Heart.Attack.Cost, x=Facility.Type, fill=Facility.Type, color=Facility.Type)) +
+      geom_boxplot() +
+      scale_fill_manual(values=c("#68BB0040","#00BBA040","#0099FF40")) +
+      scale_color_manual(values=c("#68BB00","#00BBA0","#0099FF")) +
+      theme_bw(base_size=8) +
+      theme(legend.position="none", axis.text.x=element_text(size=7.5, color="black"))
+
+  p_Mortality_Type <- ggplot(hospitals2d, aes(x=Facility.Type, group=Rating.Mortality)) +
+                      geom_bar(aes(group=Facility.Type, fill=Facility.Type, color=Facility.Type), alpha=0.1) +
+                      scale_fill_manual(values=c("#68BB00","#00BBA0","#0099FF")) +
+                      scale_color_manual(values=c("#68BB00","#00BBA0","#0099FF")) +
+                      labs(x="Facility.Type", title="") +
+                      theme_bw(base_size=8) +
+                      theme(axis.text.x=element_text(size=7.5, color="black"),
+                            legend.position="none",
+                            plot.margin=unit(c(0.3,0.2,0.3,0.2), "cm"),
+                            plot.background=element_blank()) +
+                      facet_grid(.~Rating.Mortality, labeller=label_both)
+  
+  p_blank <- ggplot(data.frame()) +
+                geom_point() +
+                theme_bw() +
+                theme(plot.margin=unit(c(0,0,0,0), "cm"),
+                      plot.background=element_blank(),
+                      panel.background=element_blank(),
+                      panel.border=element_blank())
+  
+  ggdraw(p_blank) +
+    draw_plot(p_Heart.Attack_Mortality, x = 0, y = 0.54, width = 0.45, height = 0.46) +
+    draw_plot(p_Heart.Attack_Type, x = 0.55, y = 0.54, width = 0.45, height = 0.46) +
+    draw_plot(p_Mortality_Type, x = 0, y = 0, width = 1, height = 0.52)
+```
+
+</br>
+
+Seeing some sparse categories between the bottom row of barplots for **Facility.Type ~ Rating.Mortality**.
+
+Will not include any interaction terms in the model for this reason.
+
+</br>
+
+```{r}
+#| code-fold: false
+#| results: hold
+
+# Linear Regression 
+m2d <- glm(Procedure.Heart.Attack.Cost ~ Rating.Mortality + Facility.Type, data=hospitals2d)
+
+car::Anova(m2d, type=3)
+```
+
+</br>
+
+```{r}
+#| code-summary: "R Code: Residuals Normality Check"
+#| code-fold: show
+#| results: hold
+#| out-width: 100%
+#| fig-asp: 0.6
+
+StdResiduals <- MASS::stdres(m2d)
+
+par(mfrow=c(1,2), cex.axis=0.5, cex.lab=0.6, cex.main=0.7)
+
+# Residuals QQPlot
+# invisible() suppresses any integer's being printed by qqPlot()
+invisible(car::qqPlot(StdResiduals, 
+                      main="QQPlot", 
+                      id=F, grid=F,
+                      col="gray30", col.lines="#C774E8"))
+
+# Residuals Normal Histogram
+rcompanion::plotNormalHistogram(StdResiduals, 
+                                prob=F, 
+                                main="Normal Histogram", 
+                                col="#C774E815", border="#C774E8", linecol="#9E0142")
+```
+
+</br>
+
+</br>
+
+## 3. Billionaire Data: [https://corgis-edu.github.io/corgis/csv/billionaires/](https://corgis-edu.github.io/corgis/csv/billionaires/)
+
+```{r}
+#| code-summary: "R Code: Billionaire Data"
+
+billion <- read.csv("billionaires.csv")
+
+# Fixed Column Names in Data
+names(billion) <- gsub(" ",".",names(billion))
+
+# Key/Variable Meta (fixed variable names here too, removed periods from descriptions, & dropped the example values)
+billionk <- read.csv("billionaires_KEY.csv") %>% select(VAR, TYPE, DESC)
+```
+
+</br>
+
+#### 3a. Model how the person became a billionaire (*wealth.how.inherited*) as a function of the year of data collection (*year*) and the age of the billionaire (*demographics.age*).
+
+</br>
+
+```{r}
+#| code-summary: "R Code: Variables & Data Preview"
+#| results: hold
+
+billion3a <-  billion %>%
+                  select(wealth.how.inherited,
+                         year,
+                         demographics.age)
+
+billionk[billionk$VAR %in% names(billion3a),] %>% 
+  kbl(align=c("l","c","l"),
+      caption="VARIABLES", 
+      format="html", 
+      table.attr='class="Tbls"') %>% 
+  kable_styling(c("bordered","hover"))
+
+head(billion3a) %>% 
+  kbl(align=rep("c",5), 
+      caption="DATA (first 6 rows)",
+      full_width=F,
+      format="html", 
+      table.attr='class="Tbls"') %>% 
+  kable_styling(c("bordered","hover"))
+```
+
+</br>
+
+#### 3b. What limitations does the model in 3a have? To answer this question, you should literally open the dataset and look at it; you may want to sort the data as well. Consider what you see and ask yourself what assumptions we make in all of the modeling strategies we have covered.
 
 
 
